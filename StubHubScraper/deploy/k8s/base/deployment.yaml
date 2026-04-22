@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stubhub-scraper
+  namespace: stubhub-scraper
+  labels:
+    app.kubernetes.io/name: stubhub-scraper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: stubhub-scraper
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: stubhub-scraper
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: stubhub-scraper
+          image: ghcr.io/kkhanna123/stubhub-scraper:latest
+          imagePullPolicy: Always
+          env:
+            - name: PYTHONUNBUFFERED
+              value: "1"
+            - name: STUBHUB_STORAGE_BACKEND
+              value: duckdb
+            - name: STUBHUB_DUCKDB_PATH
+              value: /var/lib/stubhub-scraper/data/stubhub.duckdb
+            - name: STUBHUB_DUCKDB_TABLE
+              value: stubhub_listings
+            - name: STUBHUB_DATA_DIR
+              value: /var/lib/stubhub-scraper/data
+            - name: STUBHUB_LOG_DIR
+              value: /var/lib/stubhub-scraper/logs
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/stubhub-scraper
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: stubhub-scraper-data

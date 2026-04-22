@@ -1,6 +1,6 @@
 # StubHub Madrid Open scraper
 
-Hourly collection of every live ticket listing for the Mutua Madrid Open from [stubhub.com](https://www.stubhub.com/mutua-madrid-open-tickets/category/138278297), with one parquet file per session carrying both per-listing snapshots and per-snapshot summary statistics (average price + liquidity).
+Hourly collection of every live ticket listing for the Mutua Madrid Open from [stubhub.com](https://www.stubhub.com/mutua-madrid-open-tickets/category/138278297), with per-listing snapshots and per-snapshot summary statistics (average price + liquidity).
 
 Built to run 24/7 on a server for the duration of the tournament; sessions drop out automatically once their scheduled end time has passed.
 
@@ -22,18 +22,17 @@ The endpoint is protected by an AWS WAF that 403s bare `curl`/`requests` calls, 
 
 ### 3. Storage
 
-Every snapshot appends to a single per-session parquet file:
-
-```
-data/event_{eventId}_{yyyymmdd}_{startHHMM}-{endHHMM}Z_{venue-slug}.parquet
-```
-
-The UTC time range is in the filename so downstream consumers can interpolate against actual match start times without needing the manifest. Rows carry a `row_type` column:
+Rows carry a `row_type` column:
 
 - `row_type == "listing"` — one row per distinct listing at that snapshot.
 - `row_type == "summary"` — one row per snapshot carrying the aggregate price and liquidity metrics.
 
-Both share the same flat schema; fields not relevant to a row type are null.
+Both share the same flat schema; fields not relevant to a row type are null. The scraper supports two sinks:
+
+- `parquet` — original per-event parquet files under `data/`
+- `duckdb` — a single local DuckDB database file
+
+Each row is enriched with event metadata (`event_slug`, `event_name`, `venue_name`, `venue_city`, `event_start_utc`, `event_end_utc`) so the database sinks keep the same context that parquet previously encoded only in the filename.
 
 ### 4. Scheduler
 
@@ -76,16 +75,16 @@ Per-listing rows additionally carry `section`, `row`, `ticket_class`, `quantity_
 Requires Python 3.12+.
 
 ```bash
-cd stubhubTicketScraper
-python3.12 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-.venv/bin/playwright install chromium
+cd StubHubScraper
+uv venv
+uv pip install -r requirements.txt
+uv run playwright install chromium
 
-.venv/bin/python run_once.py        # one collection cycle (useful for smoke tests)
-.venv/bin/python run_forever.py     # 24/7 loop, writes logs to logs/scraper.log
+uv run python run_once.py        # one collection cycle (useful for smoke tests)
+uv run python run_forever.py     # 24/7 loop, writes logs to logs/scraper.log
 ```
 
-Parquet output lands in `data/`. Inspect with:
+Parquet output lands in `data/` by default. Inspect with:
 
 ```python
 import pandas as pd
@@ -95,7 +94,59 @@ summary = df[df.row_type == "summary"].sort_values("snapshot_ts")
 
 ---
 
-## Server deployment
+## Configuration
+
+Runtime configuration is env-driven:
+
+| env var | default | purpose |
+|---|---|---|
+| `STUBHUB_STORAGE_BACKEND` | `parquet` | one of `parquet`, `duckdb` |
+| `STUBHUB_DATA_DIR` | `./data` | manifest, parquet, and default DuckDB file directory |
+| `STUBHUB_LOG_DIR` | `./logs` | log directory for `run_forever.py` |
+| `STUBHUB_DUCKDB_PATH` | `data/stubhub.duckdb` | DuckDB file path |
+| `STUBHUB_DUCKDB_TABLE` | `stubhub_listings` | DuckDB table name |
+| `STUBHUB_CATEGORY_URL` | Madrid Open category | event grid URL |
+| `STUBHUB_SESSION_DURATION_HOURS` | `10` | inferred end time padding |
+| `STUBHUB_PAGE_SIZE` | `10` | listing POST page size |
+| `STUBHUB_MAX_PAGES` | `30` | hard page cap per event |
+| `STUBHUB_REQUEST_PAUSE_SEC` | `0.5` | pause between listing POSTs |
+| `STUBHUB_EVENT_PAUSE_SEC` | `2.0` | pause between events |
+| `STUBHUB_CYCLE_INTERVAL_SEC` | `3600` | poll cadence |
+
+Examples:
+
+```bash
+STUBHUB_STORAGE_BACKEND=duckdb \
+STUBHUB_DUCKDB_PATH="$PWD/data/stubhub.duckdb" \
+uv run python run_once.py
+```
+
+---
+
+## Deployment
+
+### Docker image
+
+The repo now ships a Playwright-ready Dockerfile. Build and push it with:
+
+```bash
+docker build -t ghcr.io/kkhanna123/stubhub-scraper:latest .
+docker push ghcr.io/kkhanna123/stubhub-scraper:latest
+```
+
+If you publish to a different registry, update `deploy/k8s/base/deployment.yaml`.
+
+### Kubernetes / boostrun
+
+The Kubernetes manifests under `deploy/k8s/base/` deploy the scraper into namespace `stubhub-scraper` and persist a DuckDB file on a PVC at `/var/lib/stubhub-scraper/data/stubhub.duckdb`.
+
+Render/apply them with:
+
+```bash
+kubectl kustomize deploy/k8s/base | kubectl apply -f -
+```
+
+### VM / systemd deployment
 
 Designed for a small Linux VM (Debian / Ubuntu) running as a systemd service.
 
@@ -108,9 +159,9 @@ Designed for a small Linux VM (Debian / Ubuntu) running as a systemd service.
     sudo chown $USER:$USER /opt/stubhubTicketScraper
     git clone <this-repo> /opt/stubhubTicketScraper
     cd /opt/stubhubTicketScraper
-    python3.12 -m venv .venv
-    .venv/bin/pip install -r requirements.txt
-    .venv/bin/playwright install --with-deps chromium
+    uv venv
+    uv pip install -r requirements.txt
+    uv run playwright install --with-deps chromium
     ```
 
 3. Install the systemd unit (edit `User` and `WorkingDirectory` to match your setup):
@@ -130,38 +181,24 @@ Designed for a small Linux VM (Debian / Ubuntu) running as a systemd service.
 
 ---
 
-## Configuration
-
-All constants live in `src/config.py`:
-
-| constant                | default | purpose                                                          |
-|-------------------------|---------|------------------------------------------------------------------|
-| `CATEGORY_URL`          | Madrid Open category URL | scraped for session discovery                     |
-| `SESSION_DURATION_HOURS`| `10`    | assumed session length; sessions are skipped after `start + this`|
-| `PAGE_SIZE`             | `10`    | listings per POST (StubHub effectively caps here)                |
-| `MAX_PAGES`             | `30`    | hard pagination ceiling per session                              |
-| `REQUEST_PAUSE_SEC`     | `0.5`   | delay between listings POSTs inside one session                  |
-| `EVENT_PAUSE_SEC`       | `2.0`   | delay between sessions                                           |
-| `CYCLE_INTERVAL_SEC`    | `3600`  | cycle cadence                                                    |
-
----
-
 ## Project layout
 
 ```
-stubhubTicketScraper/
+StubHubScraper/
+├── Dockerfile
 ├── src/
 │   ├── browser.py        # Playwright context manager + WAF-authenticated POST helper
 │   ├── discovery.py      # category page → Event manifest (with persistence)
 │   ├── listings.py       # paginated POST → all listings for one event
 │   ├── metrics.py        # listing rows + summary-row builder
-│   ├── storage.py        # per-event parquet append
+│   ├── storage.py        # parquet / DuckDB sinks
 │   ├── scheduler.py      # hourly cycle runner + run_forever loop
 │   └── config.py
 ├── scripts/              # throwaway reverse-engineering probes (kept for reference)
 ├── deploy/
-│   └── stubhub-scraper.service   # systemd unit
-├── data/                 # parquet output + events_manifest.json
+│   ├── stubhub-scraper.service   # systemd unit
+│   └── k8s/              # Kustomize base deployment
+├── data/                 # parquet output, duckdb file, events_manifest.json
 ├── logs/                 # scraper.log (when run via run_forever.py)
 ├── run_once.py           # one-cycle entrypoint
 ├── run_forever.py        # 24/7 entrypoint

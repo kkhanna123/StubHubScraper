@@ -41,7 +41,11 @@ def collect_one_event(ctx, event: Event) -> int:
         return 0
 
     rows = listing_rows(snap) + [summary_row(snap)]
-    append_rows(event, rows)
+    try:
+        append_rows(event, rows)
+    except Exception as e:
+        log.error("event %s: storage write failed: %s", event.event_id, e)
+        return 0
     return len(snap.items)
 
 
