@@ -1,0 +1,10 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stubhub-scraper
+  namespace: stubhub-scraper
+spec:
+  template:
+    spec:
+      imagePullSecrets:
+        - name: will-be-replaced

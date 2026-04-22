@@ -1,0 +1,38 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+configMapGenerator:
+  - name: private-ghcr-config
+    envs:
+      - params.env
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+patches:
+  - path: deployment-patch.yaml
+
+replacements:
+  - source:
+      kind: ConfigMap
+      name: private-ghcr-config
+      fieldPath: data.IMAGE
+    targets:
+      - select:
+          kind: Deployment
+          name: stubhub-scraper
+        fieldPaths:
+          - spec.template.spec.containers.0.image
+  - source:
+      kind: ConfigMap
+      name: private-ghcr-config
+      fieldPath: data.IMAGE_PULL_SECRET
+    targets:
+      - select:
+          kind: Deployment
+          name: stubhub-scraper
+        fieldPaths:
+          - spec.template.spec.imagePullSecrets.0.name

@@ -136,6 +136,19 @@ docker push ghcr.io/kkhanna123/stubhub-scraper:latest
 
 If you publish to a different registry, update `deploy/k8s/base/deployment.yaml`.
 
+For a private GHCR image, authenticate first with a token that has `write:packages`:
+
+```bash
+export GHCR_OWNER=kkhanna123
+export IMAGE_TAG=$(git rev-parse --short HEAD)
+export IMAGE=ghcr.io/$GHCR_OWNER/stubhub-scraper:$IMAGE_TAG
+export GHCR_PUSH_TOKEN=<github-token-with-write-packages>
+
+echo "$GHCR_PUSH_TOKEN" | docker login ghcr.io -u "$GHCR_OWNER" --password-stdin
+docker build -t "$IMAGE" .
+docker push "$IMAGE"
+```
+
 ### Kubernetes / boostrun
 
 The Kubernetes manifests under `deploy/k8s/base/` deploy the scraper into namespace `stubhub-scraper` and persist a DuckDB file on a PVC at `/var/lib/stubhub-scraper/data/stubhub.duckdb`.
@@ -145,6 +158,36 @@ Render/apply them with:
 ```bash
 kubectl kustomize deploy/k8s/base | kubectl apply -f -
 ```
+
+If the image is private in GHCR, use the private overlay instead of the base manifest. It injects an `imagePullSecrets` entry and reads the image reference from a local `params.env` file so credentials and per-deploy image tags stay out of git.
+
+1. Create the overlay params file:
+
+    ```bash
+    cp deploy/k8s/overlays/private-ghcr/params.env.example \
+      deploy/k8s/overlays/private-ghcr/params.env
+    ```
+
+2. Edit `params.env` so `IMAGE=` points at the tag you pushed. You can keep `IMAGE_PULL_SECRET=ghcr-pull-secret` unless you want a different secret name.
+
+3. Create or update the pull secret in Kubernetes with a token that has `read:packages`:
+
+    ```bash
+    export GHCR_PULL_TOKEN=<github-token-with-read-packages>
+    kubectl -n stubhub-scraper create secret docker-registry ghcr-pull-secret \
+      --docker-server=ghcr.io \
+      --docker-username="$GHCR_OWNER" \
+      --docker-password="$GHCR_PULL_TOKEN" \
+      --dry-run=client -o yaml | kubectl apply -f -
+    ```
+
+4. Apply the overlay and wait for the rollout:
+
+    ```bash
+    kubectl apply -k deploy/k8s/overlays/private-ghcr
+    kubectl -n stubhub-scraper scale deployment/stubhub-scraper --replicas=1
+    kubectl -n stubhub-scraper rollout status deployment/stubhub-scraper
+    ```
 
 ### VM / systemd deployment
 
