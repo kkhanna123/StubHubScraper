@@ -1,0 +1,80 @@
+[
+  {
+    "event_id": 159858663,
+    "name": "Mutua Madrid Open 2026 - Tournament Pass (April 20 - May 3)",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-20-2026/event/159858663/",
+    "venue_name": "Estadio Manolo Santana at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-20T07:55:00+00:00",
+    "end_utc": "2026-05-04T17:55:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Mon - Sun",
+    "formatted_date": "Apr 20 - May 03",
+    "formatted_time": "14 days"
+  },
+  {
+    "event_id": 158170204,
+    "name": "Mutua Madrid Open 2026 - Wednesday Session (Estadio Manolo Santana)",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-22-2026/event/158170204/",
+    "venue_name": "Estadio Manolo Santana at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-22T09:00:00+00:00",
+    "end_utc": "2026-04-22T19:00:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Wed",
+    "formatted_date": "Apr 22",
+    "formatted_time": "11:00 AM"
+  },
+  {
+    "event_id": 158170333,
+    "name": "Mutua Madrid Open 2026 - Estadio Arantxa Sanchez Vicario - Wednesday Session",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-22-2026/event/158170333/",
+    "venue_name": "Estadio Arantxa Sanchez Vicario at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-22T09:00:00+00:00",
+    "end_utc": "2026-04-22T19:00:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Wed",
+    "formatted_date": "Apr 22",
+    "formatted_time": "11:00 AM"
+  },
+  {
+    "event_id": 158170334,
+    "name": "Mutua Madrid Open 2026 - Estadio Arantxa Sanchez Vicario - Thursday Session",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-23-2026/event/158170334/",
+    "venue_name": "Estadio Arantxa Sanchez Vicario at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-23T09:00:00+00:00",
+    "end_utc": "2026-04-23T19:00:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Thu",
+    "formatted_date": "Apr 23",
+    "formatted_time": "11:00 AM"
+  },
+  {
+    "event_id": 158407945,
+    "name": "Mutua Madrid Open 2026 - Thursday Session (Estadio Manolo Santana)",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-23-2026/event/158407945/",
+    "venue_name": "Estadio Manolo Santana at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-23T09:00:00+00:00",
+    "end_utc": "2026-04-23T19:00:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Thu",
+    "formatted_date": "Apr 23",
+    "formatted_time": "11:00 AM"
+  },
+  {
+    "event_id": 158170206,
+    "name": "Mutua Madrid Open 2026 - Friday Day Session (Estadio Manolo Santana)",
+    "url": "https://www.stubhub.com/mutua-madrid-open-madrid-tickets-4-24-2026/event/158170206/",
+    "venue_name": "Estadio Manolo Santana at La Caja Magica - Complex",
+    "venue_city": "Madrid",
+    "start_utc": "2026-04-24T09:00:00+00:00",
+    "end_utc": "2026-04-24T19:00:00+00:00",
+    "category_id": 4409,
+    "day_of_week": "Fri",
+    "formatted_date": "Apr 24",
+    "formatted_time": "11:00 AM"
+  }
+]

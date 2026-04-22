@@ -1,0 +1,23 @@
+[Unit]
+Description=StubHub Madrid Open hourly listings scraper
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Edit these two for your server:
+User=ubuntu
+WorkingDirectory=/opt/stubhubTicketScraper
+
+ExecStart=/opt/stubhubTicketScraper/.venv/bin/python run_forever.py
+
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+# Playwright needs a writable HOME for its browser cache
+Environment=HOME=/opt/stubhubTicketScraper
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=multi-user.target
