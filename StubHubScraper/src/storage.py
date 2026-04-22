@@ -5,6 +5,7 @@ import atexit
 import logging
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pandas as pd
 
@@ -16,7 +17,7 @@ log = logging.getLogger(__name__)
 
 def event_parquet_path(event: Event) -> Path:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    return DATA_DIR / f"{event.slug}.parquet"
+    return DATA_DIR / f"event_{event.event_id}"
 
 
 def append_rows(event: Event, rows: list[dict[str, Any]]) -> Path | None:
@@ -47,19 +48,16 @@ class ParquetStorageSink(_StorageSink):
 
     def append_rows(self, event: Event, rows: list[dict[str, Any]]) -> Path:
         path = event_parquet_path(event)
+        path.mkdir(parents=True, exist_ok=True)
         new = pd.DataFrame(_prepare_rows(event, rows))
-        if path.exists():
-            existing = pd.read_parquet(path)
-            combined = pd.concat([existing, new], ignore_index=True)
-        else:
-            combined = new
-        combined.to_parquet(path, index=False)
+        snapshot_label = rows[0]["snapshot_ts"].strftime("%Y%m%dT%H%M%S%fZ")
+        part_path = path / f"snapshot_{snapshot_label}_{uuid4().hex[:8]}.parquet"
+        new.to_parquet(part_path, index=False)
         log.info(
-            "event %s: wrote %d new rows (total %d) -> %s",
+            "event %s: wrote %d new rows -> %s",
             event.event_id,
             len(new),
-            len(combined),
-            path.name,
+            part_path,
         )
         return path
 

@@ -23,6 +23,13 @@ from .storage import append_rows
 log = logging.getLogger(__name__)
 
 
+def _seconds_until_next_cycle(now: datetime, interval_sec: int) -> float:
+    """Return seconds until the next wall-clock cycle boundary in UTC."""
+    current = now.timestamp()
+    next_boundary = ((int(current) // interval_sec) + 1) * interval_sec
+    return max(0.0, next_boundary - current)
+
+
 def collect_one_event(ctx, event: Event) -> int:
     """Return number of listings collected, or 0 on failure."""
     try:
@@ -66,12 +73,13 @@ def run_cycle() -> None:
 
 def run_forever() -> None:
     while True:
-        start = time.time()
+        started_at = datetime.now(tz=timezone.utc)
         try:
             run_cycle()
         except Exception:
             log.exception("run_cycle crashed; continuing")
-        elapsed = time.time() - start
-        sleep_for = max(60, CYCLE_INTERVAL_SEC - elapsed)
+        finished_at = datetime.now(tz=timezone.utc)
+        elapsed = (finished_at - started_at).total_seconds()
+        sleep_for = _seconds_until_next_cycle(finished_at, CYCLE_INTERVAL_SEC)
         log.info("cycle done in %.1fs; sleeping %.0fs", elapsed, sleep_for)
         time.sleep(sleep_for)

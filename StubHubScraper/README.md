@@ -29,7 +29,7 @@ Rows carry a `row_type` column:
 
 Both share the same flat schema; fields not relevant to a row type are null. The scraper supports two sinks:
 
-- `parquet` — original per-event parquet files under `data/`
+- `parquet` — append-only per-event parquet datasets under `data/`
 - `duckdb` — a single local DuckDB database file
 
 Each row is enriched with event metadata (`event_slug`, `event_name`, `venue_name`, `venue_city`, `event_start_utc`, `event_end_utc`) so the database sinks keep the same context that parquet previously encoded only in the filename.
@@ -84,11 +84,11 @@ uv run python run_once.py        # one collection cycle (useful for smoke tests)
 uv run python run_forever.py     # 24/7 loop, writes logs to logs/scraper.log
 ```
 
-Parquet output lands in `data/` by default. Inspect with:
+Parquet output lands in `data/` by default as one dataset directory per event. Inspect with:
 
 ```python
 import pandas as pd
-df = pd.read_parquet("data/event_158170204_20260422_0900-1900Z_estadio-manolo-santana-at-la-caja-magica.parquet")
+df = pd.read_parquet("data/event_158170204")
 summary = df[df.row_type == "summary"].sort_values("snapshot_ts")
 ```
 
